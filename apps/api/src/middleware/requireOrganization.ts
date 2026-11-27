@@ -19,12 +19,12 @@ export function allowRoles(...roles: string[]) {
       response.status(400).json({ error: { code: "ORGANIZATION_REQUIRED", message: "X-Organization-Id header is required" } });
       return;
     }
-    const membership = await Membership.findOne({ userId: authRequest.auth.userId, organizationId, status: "active" }).lean() as { role: string } | null;
+    const membership: any = await Membership.findOne({ userId: authRequest.auth.userId, organizationId, status: "active" }).lean();
     if (!membership) {
       response.status(403).json({ error: { code: "TENANT_ACCESS_DENIED", message: "You are not an active member of this organization" } });
       return;
     }
-    const organization = await Organization.findOne({ _id: organizationId, status: "active" }).select("_id").lean() as { _id: { toString(): string } } | null;
+    const organization: any = await Organization.findOne({ _id: organizationId, status: "active" }).select("_id").lean();
     if (!organization) {
       response.status(404).json({ error: { code: "ORGANIZATION_NOT_FOUND", message: "Organization not found" } });
       return;
