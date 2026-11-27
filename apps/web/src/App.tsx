@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 type Org={id:string;name:string;role:string}; type Account={_id:string;accountName:string;accountReference:string;currency:string}; type Tx={_id:string;bookingDate:string;description:string;counterparty?:string;currency:string;amount:string;direction:string;category:string;reconciliationStatus:string;bankAccountId?:{accountName:string}|string};
-const API=import.meta.env.VITE_API_URL??"http://localhost:4000/api/v1";
+const API="http://localhost:4000/api/v1";
 const categories=["uncategorized","customer_receipt","supplier_payment","payroll","tax","fees","interest","transfer","other"];
 export default function App(){
  const [token,setToken]=useState(""),[orgs,setOrgs]=useState<Org[]>([]),[org,setOrg]=useState(""),[name,setName]=useState(""),[boot,setBoot]=useState(true),[mode,setMode]=useState("login");
