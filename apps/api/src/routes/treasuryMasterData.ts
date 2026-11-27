@@ -1,5 +1,4 @@
 import { Router } from "express";
-import mongoose from "mongoose";
 import { z } from "zod";
 import { authenticate } from "../middleware/authenticate.js";
 import { allowRoles, type TenantRequest } from "../middleware/requireOrganization.js";
@@ -92,7 +91,6 @@ treasuryMasterDataRouter.post("/entities", allowRoles("owner", "admin", "treasur
     if (!parsed.success) { invalid(response, parsed.error.flatten()); return; }
     const t = tenant(request as TenantRequest);
     if (parsed.data.parentEntityId) {
-      if (parsed.data.parentEntityId === t) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "A legal entity cannot be its own parent" } }); return; }
       const parent = await LegalEntity.exists({ _id: parsed.data.parentEntityId, organizationId: t, status: "active" });
       if (!parent) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "Parent entity must be active and belong to this organization" } }); return; }
     }
