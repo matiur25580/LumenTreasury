@@ -3,6 +3,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 import { env } from "../config/env.js";
 import { User } from "../models/User.js";
 import { Organization } from "../models/Organization.js";
@@ -12,6 +13,8 @@ import { AuditEvent } from "../models/AuditEvent.js";
 import { authenticate, type AuthenticatedRequest } from "../middleware/authenticate.js";
 
 export const authRouter = Router();
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: { code: "RATE_LIMITED", message: "Too many authentication attempts. Try again later." } } });
+const registrationLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-7", legacyHeaders: false });
 const registerSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   email: z.string().trim().email().max(254),
@@ -36,7 +39,7 @@ async function audit(action: string, userId: string, request: import("express").
   await AuditEvent.create({ action, resourceType: "identity", actorUserId: userId, organizationId: organizationId ?? null, ipAddress: request.ip });
 }
 
-authRouter.post("/register", async (request, response, next) => {
+authRouter.post("/register", registrationLimiter, async (request, response, next) => {
   try {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) { response.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid registration details", details: parsed.error.flatten() } }); return; }
@@ -56,7 +59,7 @@ authRouter.post("/register", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-authRouter.post("/login", async (request, response, next) => {
+authRouter.post("/login", loginLimiter, async (request, response, next) => {
   try {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) { response.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Email and password are required" } }); return; }
@@ -74,7 +77,7 @@ authRouter.post("/login", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-authRouter.post("/refresh", async (request, response, next) => {
+authRouter.post("/refresh", loginLimiter, async (request, response, next) => {
   try {
     const token = request.cookies?.lt_refresh as string | undefined;
     if (!token) { response.status(401).json({ error: { code: "REFRESH_REQUIRED", message: "Refresh session is required" } }); return; }
