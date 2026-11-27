@@ -1,8 +1,9 @@
-import "dotenv/config";
+import mongoose from "mongoose";
 import { app } from "./app.js";
+import { env } from "./config/env.js";
 
-const port = Number(process.env.API_PORT ?? 4000);
-
-app.listen(port, () => {
-  console.info(`LumenTreasury API listening on port ${port}`);
-});
+async function start() {
+  await mongoose.connect(env.MONGODB_URI);
+  app.listen(env.API_PORT, () => console.log(`LumenTreasury API listening on :${env.API_PORT}`));
+}
+start().catch((error: unknown) => { console.error("API startup failed", error); process.exit(1); });
