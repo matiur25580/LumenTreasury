@@ -13,7 +13,7 @@ import { normalizeStatementRow, parseStatementDate } from "../services/transacti
 export const transactionIntelligenceRouter=Router();
 transactionIntelligenceRouter.use(authenticate);
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:2*1024*1024,files:1}});
-const objectId=z.string().regex(/^[a-f\\d]{24}$/i);
+const objectId=z.string().regex(/^[a-f\d]{24}$/i);
 const categories=["uncategorized","customer_receipt","supplier_payment","payroll","tax","fees","interest","transfer","other"] as const;
 const org=(r:TenantRequest)=>r.tenant!.organizationId;
 const actor=(r:TenantRequest)=>r.auth!.userId;
