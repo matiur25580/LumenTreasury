@@ -1,0 +1,17 @@
+{
+  "name": "lumentreasury",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Enterprise Treasury, Liquidity & Working Capital Intelligence Platform",
+  "workspaces": ["apps/api", "apps/web"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @lumentreasury/api\" \"npm run dev -w @lumentreasury/web\"",
+    "build": "npm run build -w @lumentreasury/api && npm run build -w @lumentreasury/web",
+    "typecheck": "npm run typecheck -w @lumentreasury/api && npm run typecheck -w @lumentreasury/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": { "node": ">=20.11.0", "npm": ">=10.2.0" }
+}
