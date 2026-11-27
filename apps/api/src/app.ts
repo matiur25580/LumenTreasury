@@ -4,6 +4,7 @@ import express from "express";
 import helmet from "helmet";
 import { authRouter } from "./routes/auth.js";
 import { organizationRouter } from "./routes/organizations.js";
+import { treasuryMasterDataRouter } from "./routes/treasuryMasterData.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { env } from "./config/env.js";
 
@@ -19,6 +20,7 @@ app.get("/api/v1/health", (_request, response) => {
 });
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/organizations", organizationRouter);
+app.use("/api/v1/treasury", treasuryMasterDataRouter);
 app.use(errorHandler);
 app.use((_request, response) => {
   response.status(404).json({ error: { code: "NOT_FOUND", message: "Route not found" } });
