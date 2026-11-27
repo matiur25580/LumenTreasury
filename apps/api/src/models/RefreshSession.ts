@@ -9,4 +9,4 @@ const refreshSessionSchema = new Schema({
   userAgent: { type: String, maxlength: 500 },
   ipAddress: { type: String, maxlength: 80 }
 }, { timestamps: true, versionKey: false });
-export const RefreshSession = mongoose.models.RefreshSession ?? mongoose.model("RefreshSession", refreshSessionSchema);
+export const RefreshSession = (mongoose.models.RefreshSession as mongoose.Model<any> | undefined) ?? mongoose.model<any>("RefreshSession", refreshSessionSchema);
