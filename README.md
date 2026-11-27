@@ -12,6 +12,7 @@ LumenTreasury is a MERN-based enterprise treasury workspace for multi-entity org
 
 - Email/password identity with bcrypt password hashing, short-lived JWT access tokens, and rotating opaque refresh sessions in HttpOnly cookies.
 - Organization provisioning, membership roles, server-validated tenant context, and append-only identity/organization audit events.
+- Organization-scoped legal entity, bank, and bank-account registries with role-aware CRUD, pagination, audit events, and soft deactivation.
 - Login/registration/refresh rate limits and strict request validation.
 
 - React + TypeScript + Vite treasury workspace shell.
@@ -43,7 +44,7 @@ Requirements: Node.js 20.11+, npm 10+, and Docker Compose.
 
 1. Enterprise foundation: monorepo, API/web shells, configuration, health checks, Docker, CI, and engineering standards.
 2. Identity and tenancy: authentication, organizations, memberships, RBAC, tenant isolation, audit events (initial implementation in progress).
-3. Treasury master data: entities, bank registry, accounts, currencies, account ownership.
+3. Treasury master data: entities, bank registry, accounts, currencies, account ownership (initial registry APIs implemented).
 4. Transaction intelligence: statement imports, normalized transactions, reconciliation, cash positions.
 5. Treasury command center: dashboards, reporting, realtime updates.
 6. Cash forecasting and scenario planning.
