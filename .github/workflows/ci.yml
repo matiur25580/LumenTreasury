@@ -17,6 +17,8 @@ jobs:
           node-version: 20
       - run: npm install
         name: Install dependencies
+      - run: npm test --workspace @lumentreasury/api
+        name: API unit tests
       - run: npm run typecheck
         name: Typecheck API and web
       - run: npm run build
