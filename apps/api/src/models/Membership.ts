@@ -7,4 +7,4 @@ const membershipSchema = new Schema({
   status: { type: String, enum: ["active", "invited", "suspended"], default: "active", index: true }
 }, { timestamps: true, versionKey: false });
 membershipSchema.index({ userId: 1, organizationId: 1 }, { unique: true });
-export const Membership = mongoose.models.Membership ?? mongoose.model("Membership", membershipSchema);
+export const Membership = (mongoose.models.Membership as mongoose.Model<any> | undefined) ?? mongoose.model<any>("Membership", membershipSchema);
