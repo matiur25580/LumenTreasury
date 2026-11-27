@@ -48,7 +48,7 @@ transactionIntelligenceRouter.post("/imports",allowRoles("owner","admin","treasu
   try{records=parse(file.buffer,{bom:true,columns:(h:string[])=>h.map(x=>x.trim()),skip_empty_lines:true,trim:true,relax_column_count:false,max_record_size:4096}) as Record<string,unknown>[];}
   catch{fail(res,"CSV_PARSE_ERROR","The CSV could not be parsed; check headers, quoting, and row widths");return;}
   if(records.length>5000){fail(res,"ROW_LIMIT_EXCEEDED","A statement may contain at most 5,000 data rows");return;}
-  const headers=records.length?Object.keys(records[0]):[];
+  const headers=records.length?Object.keys(records[0]??{}):[];
   if(!["bookingDate","description","amount"].every(h=>headers.includes(h))){fail(res,"CSV_HEADERS_INVALID","Required headers: bookingDate, description, amount; optional: valueDate, currency, reference, counterparty");return;}
   const valid:Record<string,unknown>[]=[],errors:Record<string,unknown>[]=[];
   records.forEach((row,i)=>{const v=normalize(row,account.currency);if(v.value)valid.push({...v.value,rowNumber:i+2});else errors.push({rowNumber:i+2,messages:v.errors});});
