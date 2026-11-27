@@ -68,6 +68,18 @@ async function writeAudit(request: TenantRequest, action: string, resourceType: 
 function invalid(response: import("express").Response, details: unknown) {
   response.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Please check the submitted fields", details } });
 }
+
+async function parentWouldCreateCycle(organizationId: string, entityId: string, candidateParentId: string): Promise<boolean> {
+  let cursor: string | null = candidateParentId;
+  const visited = new Set<string>();
+  for (let depth = 0; cursor && depth < 100; depth += 1) {
+    if (cursor === entityId || visited.has(cursor)) return true;
+    visited.add(cursor);
+    const parent: any = await LegalEntity.findOne({ _id: cursor, organizationId }).select("parentEntityId").lean();
+    cursor = parent?.parentEntityId ? String(parent.parentEntityId) : null;
+  }
+  return cursor !== null;
+}
 function notFound(response: import("express").Response, resource: string) {
   response.status(404).json({ error: { code: "RESOURCE_NOT_FOUND", message: `${resource} was not found in this organization` } });
 }
@@ -109,6 +121,7 @@ treasuryMasterDataRouter.patch("/entities/:id", allowRoles("owner", "admin", "tr
       if (parsed.data.parentEntityId === request.params.id) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "A legal entity cannot be its own parent" } }); return; }
       const parent = await LegalEntity.exists({ _id: parsed.data.parentEntityId, organizationId: t, status: "active" });
       if (!parent) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "Parent entity must be active and belong to this organization" } }); return; }
+      if (await parentWouldCreateCycle(t, request.params.id, parsed.data.parentEntityId)) { response.status(400).json({ error: { code: "ENTITY_HIERARCHY_CYCLE", message: "The selected parent would create a circular entity hierarchy" } }); return; }
     }
     const item = await LegalEntity.findOneAndUpdate({ _id: request.params.id, organizationId: t }, { $set: parsed.data }, { new: true, runValidators: true });
     if (!item) { notFound(response, "Legal entity"); return; }
@@ -206,6 +219,8 @@ treasuryMasterDataRouter.delete("/entities/:id", allowRoles("owner", "admin"), a
   try {
     if (!objectId.safeParse(request.params.id).success) { invalid(response, { id: "Invalid record ID" }); return; }
     const t = tenant(request as TenantRequest);
+    const inUse = await BankAccount.exists({ organizationId: t, legalEntityId: request.params.id, status: "active" });
+    if (inUse) { response.status(409).json({ error: { code: "ENTITY_HAS_ACTIVE_ACCOUNTS", message: "Deactivate or reassign active bank accounts before deactivating this entity" } }); return; }
     const item = await LegalEntity.findOneAndUpdate({ _id: request.params.id, organizationId: t }, { $set: { status: "inactive" } }, { new: true });
     if (!item) { notFound(response, "Legal entity"); return; }
     await writeAudit(request as TenantRequest, "master_data.entity.deactivated", "legal_entity", String(item._id));
@@ -216,6 +231,8 @@ treasuryMasterDataRouter.delete("/banks/:id", allowRoles("owner", "admin"), asyn
   try {
     if (!objectId.safeParse(request.params.id).success) { invalid(response, { id: "Invalid record ID" }); return; }
     const t = tenant(request as TenantRequest);
+    const inUse = await BankAccount.exists({ organizationId: t, bankId: request.params.id, status: "active" });
+    if (inUse) { response.status(409).json({ error: { code: "BANK_HAS_ACTIVE_ACCOUNTS", message: "Deactivate or reassign active bank accounts before deactivating this bank" } }); return; }
     const item = await Bank.findOneAndUpdate({ _id: request.params.id, organizationId: t }, { $set: { status: "inactive" } }, { new: true });
     if (!item) { notFound(response, "Bank"); return; }
     await writeAudit(request as TenantRequest, "master_data.bank.deactivated", "bank", String(item._id));
