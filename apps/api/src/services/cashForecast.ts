@@ -149,3 +149,10 @@ export async function listForecastRuns(org:string,bankAccountId?:string){
  if(bankAccountId){if(!validId(bankAccountId))fail(400,"INVALID_BANK_ACCOUNT","A valid bank account identifier is required.");query.bankAccountId=bankAccountId;}
  return ForecastRun.find(query).populate("scenarioId","name scenarioType horizonDays").populate("bankAccountId","accountName accountReference currency").sort({generatedAt:-1}).limit(50).lean();
 }
+
+export async function getForecastRun(org:string,id:string){
+ if(!validId(id))fail(400,"INVALID_FORECAST_ID","A valid forecast identifier is required.");
+ const run=await ForecastRun.findOne({_id:id,organizationId:org}).populate("scenarioId","name scenarioType horizonDays inflowMultiplier outflowMultiplier").populate("bankAccountId","accountName accountReference currency").lean();
+ if(!run)fail(404,"FORECAST_NOT_FOUND","The forecast run was not found in this organization.");
+ return run;
+}
