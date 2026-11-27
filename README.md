@@ -6,27 +6,36 @@ See every balance. Anticipate every risk. Make smarter financial decisions.
 
 LumenTreasury is a MERN-based enterprise treasury workspace for multi-entity organizations. It is designed to consolidate cash visibility, model liquidity scenarios, govern treasury workflows, and provide explainable decision support.
 
-> **Development status:** Early development. This repository is not a production financial system. Initial releases use synthetic/demo data and simulated bank/payment integrations. No real funds are moved.
+> **Development status:** Early development. The current interface is a foundation preview, not a production financial system. Initial releases use synthetic/demo data and simulated bank/payment integrations. No real funds are moved.
 
-## Product goals
+## Current foundation
+
+- React + TypeScript + Vite treasury workspace shell.
+- Express + TypeScript API with Helmet, CORS, JSON limits, and a versioned health endpoint.
+- MongoDB and Redis local services through Docker Compose.
+- npm workspaces and GitHub Actions typecheck/build pipeline.
+- Responsive dark enterprise interface with clearly labelled demo-only state.
+
+## Local development
+
+Requirements: Node.js 20.11+, npm 10+, and Docker Compose.
+
+1. Copy .env.example to .env.
+2. Start infrastructure with: docker compose up -d
+3. Install dependencies with: npm install
+4. Start API and web with: npm run dev
+5. Open http://localhost:5173; API health is at http://localhost:4000/api/v1/health.
+
+## Planned product capabilities
 
 - Consolidated cash positions across legal entities, bank accounts, and currencies.
 - Importable and reconcilable transaction activity with traceable source records.
 - Cash-flow forecasting with transparent assumptions and scenario comparisons.
 - Liquidity, working-capital, FX exposure, debt, and investment visibility.
-- Governed payment requests with maker-checker approvals and immutable-style audit history.
+- Governed payment requests with maker-checker approvals and audit history.
 - Tenant isolation, granular RBAC, secure APIs, and operational observability.
 
-## Planned architecture
-
-- **Web:** React, TypeScript, Vite, accessible component system, data visualizations.
-- **API:** Node.js, Express, TypeScript, REST/OpenAPI.
-- **Data:** MongoDB with tenant-scoped schemas, indexes, and transaction-safe workflows.
-- **Jobs/cache:** Redis and BullMQ for imports, reconciliation, forecasting, and notifications.
-- **Realtime:** Socket.IO for operational updates.
-- **Quality:** Unit/integration tests, linting, type checking, CI, Docker-based local development.
-
-## Development roadmap
+## Roadmap
 
 1. Enterprise foundation: monorepo, API/web shells, configuration, health checks, Docker, CI, and engineering standards.
 2. Identity and tenancy: authentication, organizations, memberships, RBAC, tenant isolation, audit events.
@@ -51,9 +60,9 @@ LumenTreasury is a MERN-based enterprise treasury workspace for multi-entity org
 - Keep audit events append-only and avoid logging credentials or sensitive financial data.
 - Treat AI output as advisory; require authorized human approval for consequential actions.
 
-## Local development
+## Financial safety
 
-Setup instructions will be added with the first implementation milestone. Never use real banking credentials or production financial data in local/demo environments.
+This project is an engineering portfolio application. Use synthetic data and sandbox integrations only. It does not provide regulated financial advice, and no production payment execution is implemented.
 
 ## License
 
