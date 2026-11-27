@@ -10,4 +10,4 @@ const auditEventSchema = new Schema({
   ipAddress: { type: String, maxlength: 80 }
 }, { timestamps: true, versionKey: false, strict: true });
 auditEventSchema.index({ organizationId: 1, createdAt: -1 });
-export const AuditEvent = mongoose.models.AuditEvent ?? mongoose.model("AuditEvent", auditEventSchema);
+export const AuditEvent = (mongoose.models.AuditEvent as mongoose.Model<any> | undefined) ?? mongoose.model<any>("AuditEvent", auditEventSchema);
