@@ -1,4 +1,3 @@
-import {createHash} from "node:crypto";
 import {Router} from "express";
 import multer from "multer";
 import {parse} from "csv-parse/sync";
@@ -9,6 +8,7 @@ import {BankAccount} from "../models/BankAccount.js";
 import {StatementImport} from "../models/StatementImport.js";
 import {TreasuryTransaction} from "../models/TreasuryTransaction.js";
 import {AuditEvent} from "../models/AuditEvent.js";
+import { normalizeStatementRow, parseStatementDate } from "../services/transactionValidation.js";
 
 export const transactionIntelligenceRouter=Router();
 transactionIntelligenceRouter.use(authenticate);
@@ -19,23 +19,6 @@ const org=(r:TenantRequest)=>r.tenant!.organizationId;
 const actor=(r:TenantRequest)=>r.auth!.userId;
 const audit=(r:TenantRequest,action:string,type:string,id:string,metadata:Record<string,unknown>={})=>AuditEvent.create({organizationId:org(r),actorUserId:actor(r),action,resourceType:type,resourceId:id,metadata,ipAddress:r.ip});
 const fail=(res:import("express").Response,code:string,message:string,status=400)=>res.status(status).json({error:{code,message}});
-function parseDate(v:unknown):Date|null{if(typeof v!=="string"||!/^\\d{4}-\\d{2}-\\d{2}$/.test(v))return null;const d=new Date(v+"T00:00:00.000Z");return Number.isNaN(d.getTime())||d.toISOString().slice(0,10)!==v?null:d;}
-const amountPattern=/^-?\\d{1,15}(?:\\.\\d{1,4})?$/;
-function normalize(row:Record<string,unknown>,currency:string){
- const bookingDate=parseDate(row.bookingDate),valueDate=row.valueDate?parseDate(row.valueDate):null;
- const amount=String(row.amount??"").trim(),description=String(row.description??"").trim(),ccy=String(row.currency??currency).trim().toUpperCase(),errors:string[]=[];
- if(!bookingDate)errors.push("bookingDate must use YYYY-MM-DD");
- if(row.valueDate&&!valueDate)errors.push("valueDate must use YYYY-MM-DD");
- if(!amountPattern.test(amount)||Number(amount)===0)errors.push("amount must be a non-zero decimal with up to 4 fractional digits");
- if(!description||description.length>500)errors.push("description is required and must be at most 500 characters");
- if(!/^[A-Z]{3}$/.test(ccy)||ccy!==currency)errors.push("currency must match the selected bank account currency");
- if(errors.length)return {errors};
- const counterparty=String(row.counterparty??"").trim().slice(0,180)||null,reference=String(row.reference??"").trim().slice(0,160)||null;
- const normalizedAmount=amount.replace(/^(-?)0+(?=\\d)/,"$1");
- const canonical=[bookingDate!.toISOString().slice(0,10),normalizedAmount,ccy,reference??"",description.toLowerCase(),counterparty??""].join("|");
- return {value:{bookingDate,valueDate,amount:normalizedAmount,description,currency:ccy,counterparty,externalReference:reference,direction:amount.startsWith("-")?"outflow":"inflow",dedupeKey:createHash("sha256").update(canonical).digest("hex")}};
-}
-
 transactionIntelligenceRouter.post("/imports",allowRoles("owner","admin","treasury_manager","analyst"),upload.single("file"),async(req,res,next)=>{
  try{
   const r=req as TenantRequest,file=req.file,bankAccountId=String(req.body.bankAccountId??"");
@@ -51,7 +34,7 @@ transactionIntelligenceRouter.post("/imports",allowRoles("owner","admin","treasu
   const headers=records.length?Object.keys(records[0]??{}):[];
   if(!["bookingDate","description","amount"].every(h=>headers.includes(h))){fail(res,"CSV_HEADERS_INVALID","Required headers: bookingDate, description, amount; optional: valueDate, currency, reference, counterparty");return;}
   const valid:Record<string,unknown>[]=[],errors:Record<string,unknown>[]=[];
-  records.forEach((row,i)=>{const v=normalize(row,account.currency);if(v.value)valid.push({...v.value,rowNumber:i+2});else errors.push({rowNumber:i+2,messages:v.errors});});
+  records.forEach((row,i)=>{const v=normalizeStatementRow(row,account.currency);if(v.value)valid.push({...v.value,rowNumber:i+2});else errors.push({rowNumber:i+2,messages:v.errors});});
   const batch=await StatementImport.create({organizationId:org(r),bankAccountId,uploadedBy:actor(r),originalFileName:file.originalname.slice(0,180),fileSizeBytes:file.size,status:"validated",totalRows:records.length,validRows:valid.length,invalidRows:errors.length,rows:valid,errors});
   await audit(r,"transactions.statement.validated","statement_import",String(batch._id),{totalRows:records.length,validRows:valid.length,invalidRows:errors.length});
   res.status(201).json({data:{id:batch._id,status:batch.status,totalRows:batch.totalRows,validRows:batch.validRows,invalidRows:batch.invalidRows,errors:batch.errors}});
@@ -83,7 +66,7 @@ transactionIntelligenceRouter.get("/transactions",allowRoles(),async(req,res,nex
  if(req.query.bankAccountId){if(!objectId.safeParse(req.query.bankAccountId).success){fail(res,"INVALID_BANK_ACCOUNT","Invalid bankAccountId");return;}filter.bankAccountId=req.query.bankAccountId;}
  if(req.query.category&&categories.includes(String(req.query.category) as any))filter.category=req.query.category;
  if(req.query.reconciliationStatus&&["matched","unmatched"].includes(String(req.query.reconciliationStatus)))filter.reconciliationStatus=req.query.reconciliationStatus;
- if(req.query.from||req.query.to){const range:Record<string,Date>={};if(req.query.from){const d=parseDate(req.query.from);if(!d){fail(res,"INVALID_DATE","from must use YYYY-MM-DD");return;}range.$gte=d;}if(req.query.to){const d=parseDate(req.query.to);if(!d){fail(res,"INVALID_DATE","to must use YYYY-MM-DD");return;}d.setUTCHours(23,59,59,999);range.$lte=d;}filter.bookingDate=range;}
+ if(req.query.from||req.query.to){const range:Record<string,Date>={};if(req.query.from){const d=parseStatementDate(req.query.from);if(!d){fail(res,"INVALID_DATE","from must use YYYY-MM-DD");return;}range.$gte=d;}if(req.query.to){const d=parseStatementDate(req.query.to);if(!d){fail(res,"INVALID_DATE","to must use YYYY-MM-DD");return;}d.setUTCHours(23,59,59,999);range.$lte=d;}filter.bookingDate=range;}
  const [items,total,summary]=await Promise.all([TreasuryTransaction.find(filter).populate("bankAccountId","accountReference accountName currency").sort({bookingDate:-1,_id:-1}).skip((page-1)*limit).limit(limit).lean(),TreasuryTransaction.countDocuments(filter),TreasuryTransaction.aggregate([{$match:filter},{$group:{_id:{currency:"$currency",direction:"$direction"},total:{$sum:"$amount"},count:{$sum:1}}},{$project:{_id:0,currency:"$_id.currency",direction:"$_id.direction",total:{$toString:"$total"},count:1}}])]);
  res.json({data:items,summary,pagination:{page,limit,total,pages:Math.ceil(total/limit)}});
  }catch(e){next(e);}
