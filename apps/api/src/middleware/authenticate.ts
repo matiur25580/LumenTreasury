@@ -13,7 +13,7 @@ export async function authenticate(request: Request, response: Response, next: N
     return;
   }
   try {
-    const payload = jwt.verify(header.slice(7), env.JWT_ACCESS_SECRET) as jwt.JwtPayload;
+    const payload = jwt.verify(header.slice(7), env.JWT_ACCESS_SECRET, { issuer: "lumentreasury", audience: "lumentreasury-api" }) as jwt.JwtPayload;
     if (payload.typ !== "access" || typeof payload.sub !== "string" || typeof payload.email !== "string") throw new Error("Invalid token");
     const user = await User.findById(payload.sub).select("_id email status");
     if (!user || user.status !== "active") throw new Error("Inactive user");
