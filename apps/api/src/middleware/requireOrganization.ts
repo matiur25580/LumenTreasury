@@ -13,6 +13,7 @@ export function allowRoles(...roles: string[]) {
       response.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Authentication required" } });
       return;
     }
+    try {
     const organizationId = request.header("x-organization-id");
     if (!organizationId) {
       response.status(400).json({ error: { code: "ORGANIZATION_REQUIRED", message: "X-Organization-Id header is required" } });
@@ -34,5 +35,6 @@ export function allowRoles(...roles: string[]) {
     }
     authRequest.tenant = { organizationId: String(organization._id), role: membership.role };
     next();
+    } catch (error) { next(error); }
   };
 }
