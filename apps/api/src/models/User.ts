@@ -8,4 +8,4 @@ const userSchema = new Schema({
   emailVerifiedAt: { type: Date, default: null },
   lastLoginAt: { type: Date, default: null }
 }, { timestamps: true, versionKey: false });
-export const User = (mongoose.models.User as mongoose.Model<any> | undefined) ?? mongoose.model<any>("User", userSchema);
+export const User: mongoose.Model<any> = (mongoose.models.User as mongoose.Model<any> | undefined) || mongoose.model<any>("User", userSchema);
