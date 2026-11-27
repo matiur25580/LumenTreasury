@@ -114,14 +114,15 @@ treasuryMasterDataRouter.post("/entities", allowRoles("owner", "admin", "treasur
 treasuryMasterDataRouter.patch("/entities/:id", allowRoles("owner", "admin", "treasury_manager"), async (request, response, next) => {
   try {
     if (!objectId.safeParse(request.params.id).success) { invalid(response, { id: "Invalid record ID" }); return; }
+    const entityId = String(request.params.id);
     const parsed = entityUpdateSchema.safeParse(request.body);
     if (!parsed.success) { invalid(response, parsed.error.flatten()); return; }
     const t = tenant(request as TenantRequest);
     if (parsed.data.parentEntityId) {
-      if (parsed.data.parentEntityId === request.params.id) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "A legal entity cannot be its own parent" } }); return; }
+      if (parsed.data.parentEntityId === entityId) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "A legal entity cannot be its own parent" } }); return; }
       const parent = await LegalEntity.exists({ _id: parsed.data.parentEntityId, organizationId: t, status: "active" });
       if (!parent) { response.status(400).json({ error: { code: "INVALID_PARENT", message: "Parent entity must be active and belong to this organization" } }); return; }
-      if (await parentWouldCreateCycle(t, request.params.id, parsed.data.parentEntityId)) { response.status(400).json({ error: { code: "ENTITY_HIERARCHY_CYCLE", message: "The selected parent would create a circular entity hierarchy" } }); return; }
+      if (await parentWouldCreateCycle(t, entityId, parsed.data.parentEntityId)) { response.status(400).json({ error: { code: "ENTITY_HIERARCHY_CYCLE", message: "The selected parent would create a circular entity hierarchy" } }); return; }
     }
     const item = await LegalEntity.findOneAndUpdate({ _id: request.params.id, organizationId: t }, { $set: parsed.data }, { new: true, runValidators: true });
     if (!item) { notFound(response, "Legal entity"); return; }
